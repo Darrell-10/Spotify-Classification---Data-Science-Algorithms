@@ -289,7 +289,8 @@ class MyNaiveBayesClassifier:
         """Initializer for MyNaiveBayesClassifier.
         """
         self.priors = None
-        self.conditionals = None
+        self.means = None
+        self.stdevs = None
 
     def fit(self, X_train, y_train):
         """Fits a Naive Bayes classifier to X_train and y_train.
@@ -309,38 +310,30 @@ class MyNaiveBayesClassifier:
         n = len(y_train)
 
         self.priors = {}
-        self.conditionals = {}
-
-        for i in range(n):
-            y = y_train[i]
-            if y not in self.priors:
-                self.priors[y] = 0
-            self.priors[y] += 1
-
+        for y in y_train:
+            self.priors[y] = self.priors.get(y, 0) + 1
         for y in self.priors:
             self.priors[y] /= n
 
-        counts = {}
-        label_counts = {}
+        data_by_class = {}
+        for x, y in zip(X_train, y_train):
+            if y not in data_by_class:
+                data_by_class[y] = []
+            data_by_class[y].append(x)
 
-        for row_i in range(n):
-            y = y_train[row_i]
+        self.means = {}
+        self.stdevs = {}
 
-            if y not in label_counts:
-                label_counts[y] = 0
-            label_counts[y] += 1
+        for y in data_by_class:
+            rows = data_by_class[y]
+            cols = list(zip(*rows))   
 
-            row = X_train[row_i]
-            for feature_i in range(len(row)):
-                v = row[feature_i]
-                key = (feature_i, v, y)
-                if key not in counts:
-                    counts[key] = 0
-                counts[key] += 1
-        
-        for key in counts:
-            feature_i, v, y = key
-            self.conditionals[key] = counts[key] / label_counts[y]
+            self.means[y] = [sum(col) / len(col) for col in cols]
+
+            self.stdevs[y] = [
+                (sum((val - mean)**2 for val in col) / len(col)) ** 0.5
+                for col, mean in zip(cols, self.means[y])
+            ]
 
     def predict(self, X_test):
         """Makes predictions for test instances in X_test.
@@ -354,34 +347,21 @@ class MyNaiveBayesClassifier:
         """
         y_pred = []
 
-        for row_i in range(len(X_test)):
-
-            row = X_test[row_i]
+        for row in X_test:
             posteriors = {}
 
             for y in self.priors:
+                posterior = myutils.math.log(self.priors[y])
 
-                prob = self.priors[y]
+                for i, x in enumerate(row):
+                    mean = self.means[y][i]
+                    sdev = self.stdevs[y][i]
+                    likelihood = myutils.gaussian(x, mean, sdev)
+                    posterior += myutils.math.log(likelihood + 1e-9)
 
-                for feature_i in range(len(row)):
-                    v = row[feature_i]
-                    key = (feature_i, v, y)
+                posteriors[y] = posterior
 
-                    if key in self.conditionals:
-                        prob *= self.conditionals[key]
-                    else:
-                        prob *= 0
-
-                posteriors[y] = prob
-
-            best_label = None
-            best_prob = -1
-
-            for y in posteriors:
-                if posteriors[y] > best_prob:
-                    best_prob = posteriors[y]
-                    best_label = y
-
+            best_label = max(posteriors, key=posteriors.get)
             y_pred.append(best_label)
 
         return y_pred
