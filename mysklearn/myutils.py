@@ -277,3 +277,10 @@ def evaluate_feature_subset(X, y, header, feature_subset, splitter_func, clf_cla
 
     # return mean accuracy
     return sum(accuracies) / len(accuracies)
+
+def gaussian(x, mean, sdev):
+    first, second = 0, 0
+    if sdev > 0:
+        first = 1 / (math.sqrt(2 * math.pi) * sdev)
+        second = math.e ** (-((x - mean) ** 2) / (2 * (sdev ** 2)))
+    return first * second
