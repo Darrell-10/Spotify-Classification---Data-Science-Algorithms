@@ -10,6 +10,9 @@ labels for classification
 
 from mysklearn.mysimplelinearregressor import MySimpleLinearRegressor
 from mysklearn import myutils
+from mysklearn import myevaluation
+import numpy as np
+from collections import Counter
 
 class MySimpleLinearRegressionClassifier:
     """Represents a simple linear regression classifier that discretizes
@@ -448,3 +451,84 @@ class MyDecisionTreeClassifier:
         recurse(self.tree, [])
 
         pass
+
+
+class MyRandomForestClassifier:
+    def __init__(self, N=5, M=3, F=None, random_state=None):
+        self.X_train = None
+        self.y_train = None
+
+        self.N = N
+        self.M = M
+        self.F = F
+
+        self.random_state = random_state
+        self.rng = np.random.RandomState(random_state)
+
+        self.trees = []
+        self.oob_acc = []
+        self.att_subsets = []
+
+    def fit(self, X_train, y_train):
+        self.X_train = X_train
+        self.y_train = y_train
+
+        n_samples = len(X_train)
+        n_features = len(X_train[0])
+
+        if self.F is None:
+            self.F = max(1, int(np.ceil(np.sqrt(n_features))))
+
+        self.trees = []
+        all_attributes = list(range(n_features))
+
+        for _ in range(self.N):
+
+            X_boot, X_oob, y_boot, y_oob = myevaluation.bootstrap_sample(X_train, y_train, n_samples=n_samples, random_state=self.random_state)
+            
+            
+            att_subset = list(self.rng.choice(all_attributes, size=self.F, replace=False))
+            self.att_subsets.append(att_subset)
+
+            tree = MyDecisionTreeClassifier()
+
+            #manual fit
+            tree.X_train = X_boot
+            tree.y_train = y_boot
+            tree.tree = myutils.build_tree(X_boot, y_boot, att_subset)
+
+            self.trees.append(tree)
+
+            #obb accuracy
+            if len(X_oob) == 0:
+                self.oob_acc.append(0.0)
+            else:
+                preds = tree.predict(X_oob)
+                correct = sum(1 for p, t in zip(preds, y_oob) if p == t)
+                acc = correct / len(y_oob)
+                self.oob_acc.append(acc)
+
+        #select best trees
+        sorted_indices = np.argsort(self.oob_acc)[::-1]
+        self.selected_indices = sorted_indices[:self.M].tolist()
+
+
+    def predict(self, X_test):
+        
+        predictions = []
+
+        #predictions from each tree
+        for index in self.selected_indices:
+            tree = self.trees[index]
+            preds = tree.predict(X_test)
+            predictions.append(preds)
+
+        predictions = list(zip(*predictions))
+
+        #list of final predictions of all test samples
+        final = []
+        for votes in predictions:
+            c = Counter(votes)
+            final.append(c.most_common(1)[0][0])
+
+        return final
