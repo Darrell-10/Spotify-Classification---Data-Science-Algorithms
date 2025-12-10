@@ -1,10 +1,11 @@
 """
-Programmer: Jon Larson, 
+Programmer: Jon Larson, Darrell Cenido
 Class: Cpsc 322-01, Fall 2025
 Group Project - Spotify Classification
-12/2/25
+12/9/25
 Description: This file contains
-the utility functions used within []
+the utility functions used to perform
+classification and other tasks.
 """
 
 import numpy as np

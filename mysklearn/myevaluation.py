@@ -1,9 +1,10 @@
 """
-Programmer: Jon Larson, 
+Programmer: Jon Larson
 Class: Cpsc 322-01, Fall 2025
 Group Project - Spotify Classification
-12/2/25
-Description: This file contains []
+12/9/25
+Description: This file contains useful 
+functions for classification tasks.
 """
 
 from mysklearn import myutils
@@ -74,6 +75,57 @@ def train_test_split(X, y, test_size=0.33, random_state=None, shuffle=True):
     X_train = X_shuffled[:split_index]
     y_train = y_shuffled[:split_index]
 
+    return X_train, X_test, y_train, y_test
+
+def stratified_train_test_split(X, y, test_size=0.33, random_state=None):
+    """
+    Split dataset into train and test sets, preserving class distribution (stratified).
+    
+    Args:
+        X (list of list): Features
+        y (list): Labels
+        test_size (float or int): Proportion or number of instances in test set
+        random_state (int): Seed for reproducibility
+    
+    Returns:
+        X_train, X_test, y_train, y_test
+    """
+    if len(X) != len(y):
+        raise ValueError("X and y must be the same length")
+    
+    n = len(X)
+    
+    #number of test samples
+    if isinstance(test_size, float):
+        n_test_total = int(np.ceil(n * test_size))
+    elif isinstance(test_size, int):
+        n_test_total = test_size
+    else:
+        raise TypeError("test_size must be float or int")
+    
+    rng = np.random.default_rng(random_state)
+    
+    label_to_indices = {}
+    for i, label in enumerate(y):
+        label_to_indices.setdefault(label, []).append(i)
+    
+    X_train, X_test, y_train, y_test = [], [], [], []
+    
+    for label, indices in label_to_indices.items():
+        n_label = len(indices)
+        n_test_label = int(np.ceil(n_label * test_size)) if isinstance(test_size, float) else int(np.ceil(n_test_total * n_label / n))
+        
+        indices_shuffled = list(indices)
+        rng.shuffle(indices_shuffled)
+        
+        test_indices = indices_shuffled[:n_test_label]
+        train_indices = indices_shuffled[n_test_label:]
+        
+        X_test.extend([X[i] for i in test_indices])
+        y_test.extend([y[i] for i in test_indices])
+        X_train.extend([X[i] for i in train_indices])
+        y_train.extend([y[i] for i in train_indices])
+    
     return X_train, X_test, y_train, y_test
 
 def kfold_split(X, n_splits=5, random_state=None, shuffle=False):

@@ -1,8 +1,8 @@
 """
-Programmer: Jon Larson, 
+Programmer: Jon Larson, Darrell Cenido
 Class: Cpsc 322-01, Fall 2025
 Group Project - Spotify Classification
-12/2/25
+12/9/25
 Description: This file contains
 the classes used to fit and predict
 labels for classification
@@ -484,9 +484,13 @@ class MyRandomForestClassifier:
 
         for _ in range(self.N):
 
-            X_boot, X_oob, y_boot, y_oob = myevaluation.bootstrap_sample(X_train, y_train, n_samples=n_samples, random_state=self.random_state)
-            
-            
+            if self.random_state is None:
+                seed = None
+            else:
+                seed = self.random_state + _
+
+            X_boot, X_oob, y_boot, y_oob = myevaluation.bootstrap_sample(X_train, y_train, n_samples=n_samples, random_state=seed)
+
             att_subset = list(self.rng.choice(all_attributes, size=self.F, replace=False))
             self.att_subsets.append(att_subset)
 
@@ -511,7 +515,6 @@ class MyRandomForestClassifier:
         #select best trees
         sorted_indices = np.argsort(self.oob_acc)[::-1]
         self.selected_indices = sorted_indices[:self.M].tolist()
-
 
     def predict(self, X_test):
         
